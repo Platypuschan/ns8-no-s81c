@@ -1,0 +1,105 @@
+name: Validate and publish module
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: no-s81c-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-26.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Ensure module packaging tools
+        run: |
+          if ! command -v podman >/dev/null || ! command -v skopeo >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y podman skopeo
+          fi
+      - name: Unit and filesystem regressions
+        run: |
+          python3 -W error::ResourceWarning -m unittest discover -s tests -v
+          python3 -O -m unittest discover -s tests -v
+          node --check ui/module.js
+          python3 -c 'import json,pathlib; [json.loads(p.read_text()) for p in pathlib.Path(".").rglob("*.json")]'
+          git diff --check
+      - name: Build exact scratch module and verify exported payload
+        run: |
+          podman build --no-cache --build-arg REVISION="$GITHUB_SHA" -t ghcr.io/platypuschan/no-s81c:tested .
+          python3 scripts/verify-package.py ghcr.io/platypuschan/no-s81c:tested
+          podman save --format oci-archive -o no-s81c.oci.tar ghcr.io/platypuschan/no-s81c:tested
+          sha256sum no-s81c.oci.tar > no-s81c.oci.tar.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tested-module-${{ github.sha }}
+          path: |
+            no-s81c.oci.tar
+            no-s81c.oci.tar.sha256
+          retention-days: 14
+
+  publish:
+    if: github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main'
+    needs: validate
+    runs-on: ubuntu-26.04
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: tested-module-${{ github.sha }}
+      - name: Ensure publication tools
+        run: |
+          if ! command -v podman >/dev/null || ! command -v skopeo >/dev/null; then
+            sudo apt-get update
+            sudo apt-get install -y podman skopeo
+          fi
+      - name: Publish the tested image without rebuilding
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REGISTRY_USER: ${{ github.actor }}
+        run: |
+          set -euo pipefail
+          sha256sum --check no-s81c.oci.tar.sha256
+          podman load -i no-s81c.oci.tar
+          python3 scripts/verify-package.py ghcr.io/platypuschan/no-s81c:tested
+          VERSION="$(tr -d '\n' < VERSION)"
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+-rc\.[1-9][0-9]*$ ]] || { echo 'This initial publisher only publishes explicit RC versions' >&2; exit 1; }
+          printf '%s' "$GH_TOKEN" | podman login ghcr.io -u "$REGISTRY_USER" --password-stdin
+          IMAGE=ghcr.io/platypuschan/no-s81c
+          podman push --digestfile tested.digest "$IMAGE:tested" "docker://$IMAGE:sha-$GITHUB_SHA"
+          DIGEST="$(cat tested.digest)"
+          if EXISTING="$(skopeo inspect --raw "docker://$IMAGE:$VERSION" 2>/dev/null | sha256sum | cut -d' ' -f1)" && skopeo inspect "docker://$IMAGE:$VERSION" >/dev/null 2>&1; then
+            [[ "sha256:$EXISTING" == "$DIGEST" ]] || { echo 'Version already exists with another digest' >&2; exit 1; }
+          else
+            skopeo copy --preserve-digests "docker://$IMAGE@${DIGEST}" "docker://$IMAGE:$VERSION"
+          fi
+          ACTUAL="$(skopeo inspect --raw "docker://$IMAGE:$VERSION" | sha256sum | cut -d' ' -f1)"
+          [[ "sha256:$ACTUAL" == "$DIGEST" ]]
+          [[ "$(skopeo inspect --format '{{ index .Labels "org.opencontainers.image.revision" }}' "docker://$IMAGE:$VERSION")" == "$GITHUB_SHA" ]]
+          printf 'Published `%s:%s` at `%s` from `%s`.\n' "$IMAGE" "$VERSION" "$DIGEST" "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+      - name: Create the matching prerelease
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          VERSION="$(tr -d '\n' < VERSION)"
+          if ! gh release view "$VERSION" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "$VERSION" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --latest=false --title "$VERSION" --notes-file docs/release-notes.md
+          fi
+          TAG_SHA="$(gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/$VERSION" --jq '.object.sha')"
+          [[ "$TAG_SHA" == "$GITHUB_SHA" ]]
+          [[ "$(gh release view "$VERSION" --repo "$GITHUB_REPOSITORY" --json isPrerelease --jq '.isPrerelease')" == true ]]

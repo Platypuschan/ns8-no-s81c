@@ -1,0 +1,22 @@
+{
+  "name": "No s81c (local fonts)",
+  "description": {
+    "en": "Host-local IBM Plex fonts for NS8 Cluster Admin",
+    "de": "Lokale IBM-Plex-Schriftarten f\u00fcr NS8 Cluster Admin"
+  },
+  "categories": [
+    "system"
+  ],
+  "authors": [
+    {
+      "name": "Platypuschan"
+    }
+  ],
+  "source": "ghcr.io/platypuschan/no-s81c",
+  "docs": {
+    "documentation_url": "https://github.com/Platypuschan/ns8-no-s81c#readme",
+    "code_url": "https://github.com/Platypuschan/ns8-no-s81c",
+    "bug_url": "https://github.com/Platypuschan/ns8-no-s81c/issues",
+    "relnotes_url": "https://github.com/Platypuschan/ns8-no-s81c/releases"
+  }
+}
