@@ -1,5 +1,5 @@
 FROM scratch
-ARG VERSION=0.1.0-rc.1
+ARG VERSION=0.1.0-rc.2
 ARG REVISION=uncommitted
 LABEL org.nethserver.rootfull="1" \
       org.nethserver.max-per-node="1" \

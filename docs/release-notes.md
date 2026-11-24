@@ -1,16 +1,21 @@
-# 0.1.0-rc.1
+# 0.1.0-rc.2
 
-Initial testing release of **No s81c (local fonts)** for NethServer 8 Core 3.25.1 or later.
+This testing release replaces the command-instruction page with real **Cluster Admin module options**:
 
-- Native rootfull module, at most one instance per node; no application container, listener or port allocation.
-- Local cache and HTTPS delivery of IBM Plex WOFF/WOFF2 fonts used by Cluster Admin; initial missing-font downloads are performed by the host, not the browser.
-- Instance-scoped oneshot service, path watcher, boot check and 15-minute fallback timer.
-- Atomic, journaled URL substitutions in CSS/JS, preserving file metadata and refusing unsupported URLs, unsafe paths, foreign resource ownership and invalid fonts.
-- SHA-checked publication/status, safe reapplication after UI updates, native enable/disable/status and cleanup of owned substitutions on removal.
-- Small informational module page with native operation commands. No live GUI dashboard is claimed.
+- Enable or disable local font delivery directly in the WebGUI.
+- Display actual configuration and localization status, local font count, localized files and remaining external references.
+- Refresh status and run an immediate check without a host shell.
+- Show loading, failure, unknown and timeout states; prevent conflicting actions and clean up native task subscriptions on navigation.
+- English and German interface using NS8's existing authenticated task bridge and host stylesheet. No external UI libraries or font CDN are added.
 
-This is a Core UI patch, not an official NS8 setting. Clear the browser cache after first application. Unsupported future UI layouts are reported rather than blindly rewritten. Initial downloads need Internet access. Other NS8 features may still make external requests. Read the README before installing.
+The native `refresh-fonts` action preserves the configured enabled/disabled state. Font localization, safe restore and the automatic path/timer checks remain. Browser regressions now gate package publication. Ordinary domain names in UI prose are not mistaken for downloadable font references.
 
-Automated filesystem and controller tests use explicit synthetic font fixtures. A separate real-font acceptance used an isolated copy of a Rocky Linux 9.8 / Core 3.25.1 WebUI: 240 real WOFF/WOFF2 files over trusted HTTPS, two patched CSS files, exact 422-file restore roundtrip and a same-path UI replacement/restore test. See `docs/acceptance.md` for the final live-install checks and their limits.
+## Important limits
 
-This release is a prerelease/testing build. No claim of full Debian/Rocky matrix, host-reboot, native backup/restore or production-soak acceptance.
+This remains a rootfull Core-UI patch and an explicitly marked prerelease, not an official NS8 setting or stable certification. It needs Core 3.25.1 or later and may need adapting to future WebUI layouts. Initial missing-font downloads need trusted HTTPS access from the host. It does not eliminate unrelated external requests by other NS8 functions. Hard-refresh cached Cluster Admin CSS after initial application.
+
+The [acceptance record](acceptance.md) distinguishes synthetic filesystem fixtures, simulated host-event-bus browser regressions and actual native-backend/browser tests. No full distro matrix, host-reboot, native backup/restore or production-soak coverage is claimed.
+
+## Previous testing release
+
+`0.1.0-rc.1` introduced the native rootfull module, journaled URL substitutions, SHA-checked font publication, oneshot/path/timer checks and reversible cleanup. That immutable release remains available; update an existing instance rather than adding another one.

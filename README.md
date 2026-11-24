@@ -2,59 +2,53 @@
 
 Small native **rootfull** NS8 module that self-hosts the IBM Plex font files referenced by Cluster Admin. No application container, network listener, reverse-proxy change or extra port. The native NS8 module agent remains part of NS8 management.
 
+## Use in Cluster Admin
+
+Open **Applications → No s81c → Settings**. No host shell is required for normal operation.
+
+- **Local fonts enabled:** enable or disable localization and apply the change. Disabling restores the module-owned original URLs; enabling reapplies the local copies.
+- **Status:** read the actual configuration, localization health, number of local font files, localized files and remaining external references. A failed read is shown as unknown/error, not as a stale green success.
+- **Refresh:** reload the current status without changing configuration.
+- **Check now:** run the normal localization check immediately. This does not enable a disabled module.
+
+The page is available in English and German and uses the existing authenticated NS8 session. Without the Cluster Admin host context, controls remain unavailable rather than pretending that settings were saved. Running actions disable conflicting controls; errors and timeouts are visible in the page.
+
 ## Scope
 
 - Rewrite only supported IBM Plex font URLs in existing CSS/JS assets.
 - Keep the existing font family, weights and languages; do not replace them with fallback fonts.
 - Cache downloads in the instance state and publish them below `/cluster-admin/local-fonts/`.
-- Run a hardened oneshot systemd service on relevant top-level UI changes, at boot and every 15 minutes. The watcher is not recursive: module asset changes not visible at a watched directory are repaired by the timer.
-- Expose native `get-font-status`, `get-configuration` and `configure-module` actions. The small module UI is an informational page, not a live dashboard.
-- Deactivation/removal restores only owned URL substitutions, not an outdated backup of the whole UI. Other edits and updated UI files must be preserved.
+- Run a hardened oneshot systemd service on relevant top-level UI changes, at boot and every 15 minutes. The watcher is not recursive: nested module asset changes are repaired by the timer.
+- Use native `get-font-status`, `get-configuration`, `configure-module` and `refresh-fonts` actions. Core's inherited service `get-status` action is preserved.
+- On deactivation/removal, reverse only owned URL substitutions, not an outdated backup of the whole UI. Other edits and updated UI files are preserved.
 
-This is a **Core UI patch**, not an official Core configuration switch. A future Core layout or font URL format can need a module adaptation. Unknown URLs must be reported instead of blindly rewritten. This does not eliminate unrelated external requests from other NS8 features.
+This is a **Core UI patch**, not an official Core configuration switch. A future Core layout or font URL format can need a module adaptation. Unsupported URLs are reported instead of blindly rewritten. This does not eliminate unrelated external requests from other NS8 features. Hard-refresh previously cached Cluster Admin CSS after first application.
+
+## Installation and updates
+
+For an **already installed instance**, use the update offered by Software Center; do not install another copy. This module permits at most one instance per node and needs Core 3.25.1 or later.
+
+For a fresh installation, enable the [Platypuschan NS8 catalog](https://platypuschan.github.io/ns8-modules/ns8/updates/) and install **No s81c (local fonts)** on the intended node. RC builds are explicitly marked as testing versions. The patch engine also refuses a publication directory owned by another instance.
+
+Normal removal through Cluster Admin invokes the native destructor and reverses owned substitutions. Do **not** force-remove a failed destructor or manually delete the state: its ownership journal is needed for safe cleanup. Investigate the reported error first. No host reboot is necessary.
 
 ## Initial downloads
 
-The host needs working trusted HTTPS access to `https://1.www.s81c.com/` when a new referenced font is missing. Fonts are downloaded from IBM at runtime, not redistributed in the module image. Failed downloads must not produce broken rewritten CSS; the old external reference remains until a later successful retry. Cached resources allow later reapplication without re-downloading the same fonts. Font files retain their upstream licensing; IBM Plex is distributed under SIL Open Font License: <https://github.com/IBM/plex/blob/master/LICENSE.txt>.
+The host needs trusted HTTPS access to `https://1.www.s81c.com/` when a referenced font is missing. Fonts are downloaded from IBM at runtime, not redistributed in the module image. Failed downloads leave the corresponding original external reference intact until a later successful retry. Cached fonts can be reused after UI updates. Font files retain their upstream licensing; [IBM Plex uses the SIL Open Font License](https://github.com/IBM/plex/blob/master/LICENSE.txt).
 
-## Build (no publication)
+## Development and verification
 
 ```sh
-python3 -m unittest discover -s tests -v
+python3 -W error::ResourceWarning -m unittest discover -s tests -v
+NS8_CORE_CSS=/path/to/verified/core.css node tests/ui-browser.cjs
 podman build --no-cache --build-arg REVISION="$(git rev-parse HEAD)" \
-  -t ghcr.io/platypuschan/no-s81c:0.1.0-rc.1 .
-podman save --format oci-archive -o local-fonts.oci.tar \
-  ghcr.io/platypuschan/no-s81c:0.1.0-rc.1
+  -t localhost/ns8/no-s81c:0.1.0-rc.2 .
+python3 scripts/verify-package.py localhost/ns8/no-s81c:0.1.0-rc.2
 ```
 
-Transfer the archive securely to the intended node and load it with `podman load -i local-fonts.oci.tar`. Install with the native cluster `add-module` action and explicit JSON `{"image":"ghcr.io/platypuschan/no-s81c:0.1.0-rc.1","node":1}` **only if no existing instance exists**. For an existing instance use native `update-module`, not a second `add-module`. Confirm the node identity independently: a hostname such as `node2` is not its NS8 numeric ID. The local archive is not a publicly pullable registry release.
+Browser tests need Playwright 1.64.1 and Chromium. CI extracts the host stylesheet from a digest-pinned official Core image and gates package publication on the browser suite. API/event-bus fixtures are explicitly distinguished from real backend acceptance in [the acceptance record](docs/acceptance.md).
 
-Labels declare max one instance per node and minimum Core 3.25.1. The patch engine also refuses a foreign local-fonts publication owner. Repository: https://github.com/Platypuschan/ns8-no-s81c. Catalog: https://platypuschan.github.io/ns8-modules/ns8/updates/. Prereleases are explicitly marked as testing.
-
-## Operations
-
-Substitute the actual native instance ID (example `no-s81c1`):
-
-```sh
-runagent -m no-s81c1 python3 -m localfonts.actions get-font-status </dev/null
-runagent -m no-s81c1 python3 -m localfonts.actions get-configuration </dev/null
-runagent -m no-s81c1 python3 -m localfonts.actions reconcile
-journalctl -u no-s81c1-refresh.service -n 50 --no-pager
-systemctl status no-s81c1-refresh.path no-s81c1-refresh.timer
-```
-
-Use the native `configure-module` action with explicit `{"enabled":false}` to stop rewriting and restore owned references, or `{"enabled":true}` to reapply. The equivalent host invocation is:
-
-```sh
-printf '%s\n' '{"enabled":false}' | \
-  runagent -m no-s81c1 python3 -m localfonts.actions configure-module
-```
-
-Normal native removal calls `destroy-module` before erasing the module. Do **not** force-remove a failed destructor or manually delete the state: its ownership journal is needed for safe cleanup. Investigate reported errors first. No host reboot is necessary.
-
-## Verification
-
-Keep fixture tests distinct from real acceptance. Acceptance should include actual NS8 install/status/update/remove, a second idempotent reconcile, simulated UI replacement in an isolated copy, deactivation/reactivation and browser requests from a fresh browser context. A cached browser context is not proof of no external font loads. Verify HTTPS delivery of local font bytes and font loading, not just the absence of strings in source CSS.
+Manual publication reuses the exact tested OCI archive without rebuilding. Published version tags are not overwritten. The [release notes](docs/release-notes.md) describe the current testing release.
 
 ## License
 

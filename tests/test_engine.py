@@ -79,6 +79,13 @@ class TestPatch(Base):
         self.assertFalse(s["changed"]); self.assertEqual(len(self.dl.calls), n)
         self.assertEqual((os.stat(p).st_ino, os.stat(p).st_mtime_ns), (ino, mt))
 
+    def test_domain_prose_is_not_an_external_request(self):
+        self.w('a.css', css(F1))
+        prose = "const help = 'No request to s81c.com is needed in the browser';"
+        self.w('apps/no-s81c1/module.js', prose)
+        self.assertTrue(self.e.reconcile()['ok'])
+        self.assertEqual(self.r('apps/no-s81c1/module.js'), prose)
+
     def test_module_identity_is_not_an_external_domain_reference(self):
         self.w('a.css', css(F1))
         original = "const instance = 'no-s81c1';"

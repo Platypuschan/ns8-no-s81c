@@ -1,1 +1,65 @@
-<!doctype html><html lang="de"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Lokale Schriftarten</title><link rel="stylesheet" href="/cluster-admin/css/core.css"><style>body{font-family:IBM Plex Sans,Arial,sans-serif;padding:2rem;max-width:70rem}pre{padding:1rem;background:#f4f4f4;overflow:auto}h1{margin-bottom:1rem}p{margin:1rem 0;line-height:1.5}</style><body><h1>Lokale Schriftarten · NS8</h1><p>Dieses Systemmodul ersetzt externe IBM-Plex-Schriftverweise der Cluster-Admin-Oberfläche durch lokale Dateien. Es öffnet keine Ports und benötigt keinen Anwendungscontainer.</p><p>Die Überwachung wird beim Start und nach erkannten UI-Änderungen ausgeführt, zusätzlich alle 15 Minuten. Diese kleine Verwaltungsseite zeigt keinen Live-Status; der aktuelle Status und die Steuerung sind über die nativen Modulaktionen verfügbar.</p><pre id="commands">runagent -m &lt;Instanz&gt; python3 -m localfonts.actions get-font-status &lt;/dev/null</pre><p>Vorübergehend deaktivieren: native Aktion <code>configure-module</code> mit <code>{"enabled":false}</code>. Erneut aktivieren: <code>{"enabled":true}</code>. Bei der Deinstallation werden nur nachweislich vom Modul ersetzte URL-Verweise zurückgesetzt; andere UI-Änderungen bleiben erhalten.</p><p>Nach der ersten Installation bitte die Cluster-Admin-Seite mit Strg+Umschalt+R neu laden. Der Host lädt fehlende Fonts initial über HTTPS von IBM; der Browser verwendet anschließend ausschließlich die lokale Fontkopie. Kein vollständiger Offline-Modus für andere NS8-Funktionen.</p><script src="module.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Local fonts</title>
+<link rel="stylesheet" href="/cluster-admin/css/core.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<main class="lf-page" aria-labelledby="title">
+  <h2 id="title" class="lf-title" data-i18n="title"></h2>
+  <p id="intro" class="lf-muted" data-i18n="intro"></p>
+
+  <div id="blocked" class="bx--inline-notification bx--inline-notification--warning" role="alert" hidden>
+    <div class="bx--inline-notification__details"><div class="bx--inline-notification__text-wrapper">
+      <p class="bx--inline-notification__title" id="blocked-title" data-i18n="blockedTitle"></p>
+      <p class="bx--inline-notification__subtitle" id="blocked-text"></p>
+    </div></div>
+  </div>
+
+  <div id="message" class="bx--inline-notification bx--inline-notification--error" role="alert" hidden>
+    <div class="bx--inline-notification__details"><div class="bx--inline-notification__text-wrapper">
+      <p class="bx--inline-notification__subtitle" id="message-text"></p>
+    </div></div>
+  </div>
+
+  <section class="lf-section" aria-labelledby="cfg-title">
+    <h4 id="cfg-title" data-i18n="settings"></h4>
+    <div class="bx--form-item bx--checkbox-wrapper">
+      <input id="enabled" class="bx--checkbox" type="checkbox" disabled>
+      <label for="enabled" class="bx--checkbox-label"><span class="bx--checkbox-label-text" data-i18n="enable"></span></label>
+    </div>
+    <p class="lf-row"><span class="lf-key" data-i18n="configured"></span> <strong id="configured" aria-live="polite">–</strong></p>
+    <div class="lf-actions">
+      <button id="save" type="button" class="bx--btn bx--btn--primary" disabled data-i18n="save"></button>
+    </div>
+  </section>
+
+  <section class="lf-section" aria-labelledby="st-title">
+    <h4 id="st-title" data-i18n="status"></h4>
+    <p class="lf-row"><span class="lf-key" data-i18n="overall"></span>
+      <span id="aggregate" class="bx--tag bx--tag--gray" data-state="loading" role="status" aria-live="polite">…</span></p>
+    <dl class="lf-grid">
+      <div><dt data-i18n="fonts"></dt><dd id="font-count">–</dd></div>
+      <div><dt data-i18n="patched"></dt><dd id="patched-count">–</dd></div>
+      <div><dt data-i18n="remote"></dt><dd id="remote-count">–</dd></div>
+    </dl>
+    <div id="problems-wrap" hidden>
+      <h5 data-i18n="problems"></h5>
+      <ul id="problems" class="lf-list"></ul>
+    </div>
+    <div id="errors-wrap" hidden>
+      <h5 data-i18n="errors"></h5>
+      <ul id="errors" class="lf-list" aria-label="errors"></ul>
+    </div>
+    <div class="lf-actions">
+      <button id="refresh" type="button" class="bx--btn bx--btn--secondary" disabled data-i18n="refresh"></button>
+      <button id="reload" type="button" class="bx--btn bx--btn--tertiary" disabled data-i18n="reload"></button>
+    </div>
+  </section>
+</main>
+<script src="module.js"></script>
+</body>
+</html>

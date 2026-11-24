@@ -74,7 +74,7 @@ class Controller:
                 write_config(self.state, False)
                 self.life.remove(self.module, self.state)
                 return self.engine.disable()
-            if action == 'reconcile':
+            if action in ('reconcile', 'refresh-fonts'):
                 return dict(self.engine.reconcile() if self.enabled() else self.engine.status(), enabled=self.enabled())
             raise ValueError('unsupported local-fonts action')
 
