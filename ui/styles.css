@@ -1,0 +1,18 @@
+/* Small additions on top of the Cluster Admin core.css (bx-- classes). */
+.lf-page { max-width: 44rem; padding: 1.5rem 2rem 3rem; }
+.lf-title { margin-bottom: .5rem; }
+.lf-muted { color: #525252; margin-bottom: 1rem; }
+.lf-section { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #e0e0e0; }
+.lf-section h4 { margin-bottom: 1rem; }
+.lf-row { margin: .75rem 0; }
+.lf-key { color: #525252; margin-right: .5rem; }
+.lf-actions { margin-top: 1rem; display: flex; flex-wrap: wrap; gap: .5rem; }
+.lf-grid { display: flex; flex-wrap: wrap; gap: 2rem; margin: 1rem 0; }
+.lf-grid dt { color: #525252; font-size: .875rem; }
+.lf-grid dd { font-size: 1.5rem; font-weight: 300; margin: 0; }
+.lf-list { list-style: disc; margin: .5rem 0 0 1.25rem; word-break: break-word; }
+.lf-list li { margin: .25rem 0; font-size: .875rem; }
+#aggregate[data-state="ok"] { background: #defbe6; color: #0e6027; }
+#aggregate[data-state="error"] { background: #fff1f1; color: #a2191f; }
+#aggregate[data-state="unknown"], #aggregate[data-state="loading"] { background: #e5e5e5; color: #393939; }
+[hidden] { display: none !important; }

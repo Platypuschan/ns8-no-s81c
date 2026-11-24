@@ -33,6 +33,20 @@ jobs:
           node --check ui/module.js
           python3 -c 'import json,pathlib; [json.loads(p.read_text()) for p in pathlib.Path(".").rglob("*.json")]'
           git diff --check
+      - name: Browser regressions against the pinned NS8 host stylesheet
+        env:
+          NODE_PATH: ${{ runner.temp }}/no-s81c-ui/node_modules
+          NS8_CORE_CSS: ${{ runner.temp }}/no-s81c-core.css
+        run: |
+          set -euo pipefail
+          npm install --prefix "$RUNNER_TEMP/no-s81c-ui" --no-save --ignore-scripts --package-lock=false playwright@1.64.1
+          node "$RUNNER_TEMP/no-s81c-ui/node_modules/playwright/cli.js" install --with-deps chromium
+          CORE='ghcr.io/nethserver/core@sha256:97b4639a73fca9e3c16bcf109baf7db5fa8bce7e1a8d10ebd6e1343591ab6c67'
+          podman pull "$CORE"
+          CID="$(podman create "$CORE")"
+          trap 'podman rm -f "$CID" >/dev/null' EXIT
+          podman cp "$CID:/var/lib/nethserver/cluster/ui/css/core.css" "$NS8_CORE_CSS"
+          node tests/ui-browser.cjs
       - name: Build exact scratch module and verify exported payload
         run: |
           podman build --no-cache --build-arg REVISION="$GITHUB_SHA" -t ghcr.io/platypuschan/no-s81c:tested .

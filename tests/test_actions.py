@@ -29,6 +29,22 @@ class ActionsTests(unittest.TestCase):
             self.assertTrue(result['enabled'])
             engine.reconcile.assert_called_once()
 
+    def test_refresh_fonts_uses_configured_state_without_changing_it(self):
+        from localfonts.actions import Controller
+        with tempfile.TemporaryDirectory() as tmp:
+            engine = Mock()
+            engine.reconcile.return_value = {'ok':True}
+            engine.status.return_value = {'ok':True}
+            engine.disable.return_value = {'ok':True}
+            ctrl = Controller(engine, 'no-s81c1', Path(tmp), Mock())
+            self.assertTrue(ctrl.execute('refresh-fonts', {})['enabled'])
+            engine.reconcile.assert_called_once()
+            ctrl.execute('configure-module', {'enabled':False})
+            result = ctrl.execute('refresh-fonts', {})
+            self.assertFalse(result['enabled'])
+            engine.reconcile.assert_called_once()
+            engine.status.assert_called_once()
+
     def test_font_status_action_does_not_collide_with_core_get_status(self):
         root = Path(__file__).resolve().parents[1] / 'imageroot/actions'
         self.assertTrue((root/'get-font-status/50execute').exists())
