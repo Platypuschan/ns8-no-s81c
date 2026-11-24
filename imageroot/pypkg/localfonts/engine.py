@@ -280,7 +280,7 @@ class Engine:
         remote = REMOTE_RE.findall(text)
         valid = [t[len(HOST):] for t in remote if _valid_rel(t[len(HOST):])]
         rest = REMOTE_RE.sub(lambda mo: "" if _valid_rel(mo.group(0)[len(HOST):]) else mo.group(0), text)
-        unknown = "s81c" in rest.lower()
+        unknown = "s81c.com" in rest.lower()
         local = [t[len(LOCAL_PREFIX):] for t in LOCAL_RE.findall(text)]
         local = [r for r in local if _valid_rel(r)]
         return valid, local, unknown

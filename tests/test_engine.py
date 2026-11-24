@@ -79,6 +79,14 @@ class TestPatch(Base):
         self.assertFalse(s["changed"]); self.assertEqual(len(self.dl.calls), n)
         self.assertEqual((os.stat(p).st_ino, os.stat(p).st_mtime_ns), (ino, mt))
 
+    def test_module_identity_is_not_an_external_domain_reference(self):
+        self.w('a.css', css(F1))
+        original = "const instance = 'no-s81c1';"
+        self.w('apps/no-s81c1/module.js', original)
+        result = self.e.reconcile()
+        self.assertTrue(result['ok'])
+        self.assertEqual(self.r('apps/no-s81c1/module.js'), original)
+
     def test_js_patched_other_ext_ignored(self):
         self.w("a.js", 'x="%s%s"' % (H, F1))
         self.w("a.txt", css(F1))
