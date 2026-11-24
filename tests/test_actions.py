@@ -29,6 +29,11 @@ class ActionsTests(unittest.TestCase):
             self.assertTrue(result['enabled'])
             engine.reconcile.assert_called_once()
 
+    def test_font_status_action_does_not_collide_with_core_get_status(self):
+        root = Path(__file__).resolve().parents[1] / 'imageroot/actions'
+        self.assertTrue((root/'get-font-status/50execute').exists())
+        self.assertFalse((root/'get-status').exists())
+
     def test_real_engine_disabled_status_is_healthy_and_reenable_works(self):
         from localfonts.actions import Controller
         from localfonts.engine import Engine

@@ -43,7 +43,7 @@ class Controller:
     def execute(self, action, request):
         if action == 'get-configuration':
             return {'enabled':self.enabled()}
-        if action == 'get-status':
+        if action in ('get-status', 'get-font-status'):
             return dict(self.engine.status(), enabled=self.enabled())
         self.state.mkdir(mode=0o700, parents=True, exist_ok=True)
         with (self.state / '.controller.lock').open('a') as lock:

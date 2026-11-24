@@ -8,7 +8,7 @@ Small native **rootfull** NS8 module that self-hosts the IBM Plex font files ref
 - Keep the existing font family, weights and languages; do not replace them with fallback fonts.
 - Cache downloads in the instance state and publish them below `/cluster-admin/local-fonts/`.
 - Run a hardened oneshot systemd service on relevant top-level UI changes, at boot and every 15 minutes. The watcher is not recursive: module asset changes not visible at a watched directory are repaired by the timer.
-- Expose native `get-status`, `get-configuration` and `configure-module` actions. The small module UI is an informational page, not a live dashboard.
+- Expose native `get-font-status`, `get-configuration` and `configure-module` actions. The small module UI is an informational page, not a live dashboard.
 - Deactivation/removal restores only owned URL substitutions, not an outdated backup of the whole UI. Other edits and updated UI files must be preserved.
 
 This is a **Core UI patch**, not an official Core configuration switch. A future Core layout or font URL format can need a module adaptation. Unknown URLs must be reported instead of blindly rewritten. This does not eliminate unrelated external requests from other NS8 features.
@@ -36,7 +36,7 @@ Labels declare max one instance per node and minimum Core 3.25.1. The patch engi
 Substitute the actual native instance ID (example `no-s81c1`):
 
 ```sh
-runagent -m no-s81c1 python3 -m localfonts.actions get-status </dev/null
+runagent -m no-s81c1 python3 -m localfonts.actions get-font-status </dev/null
 runagent -m no-s81c1 python3 -m localfonts.actions get-configuration </dev/null
 runagent -m no-s81c1 python3 -m localfonts.actions reconcile
 journalctl -u no-s81c1-refresh.service -n 50 --no-pager
